@@ -3,7 +3,8 @@ from logic import(
     call_operator,
     answer_call,
     reject_call,
-    hangup_call) 
+    hangup_call,
+    update_call_queue) 
 
 class CallCenter(cmd.Cmd):
  
@@ -40,14 +41,20 @@ class CallCenter(cmd.Cmd):
         
     def do_hangup(self, arg):
         if not arg:
-            print("Error: Operator ID is required. Usage: hangup <call_id>")
+            print("Error: Call ID is required. Usage: hangup <call_id>")
             return
         if arg.isalpha():
-            print("Error: Operator ID must be numbers only. Usage: hangup <call_id>")
+            print("Error: Call ID must be numbers only. Usage: hangup <call_id>")
             return
         call_id = arg
-        status = hangup_call(call_id)
-        print(status)
+        status_hangup = hangup_call(call_id)
+        print(status_hangup)
+        
+        # Só processa a fila se o hangup foi bem-sucedido
+        if "finished and operator" in str(status_hangup):
+            status_call_queue = update_call_queue()
+            if status_call_queue:
+                print(status_call_queue)
 
 
 if __name__ == '__main__':
