@@ -62,26 +62,27 @@ def reject_call(operator_id):
   return f"Error: Operator {operator_id} not found"
 
 def hangup_call(call_id):
-  if call_id in list_call:
-    list_call.remove(call_id)
+  if call_id in call_queue:
+    call_queue.remove(call_id)
     return f"Call {call_id} missed"
   
   for operator in operators:
-    if operator.call_id == call_id and operator.state == "busy":
+    if operator.call_id == call_id:
+      if operator.state == "busy":
+          operator.state = "available"
+          operator.call_id = ""
+          status = update_call_queue()
+          message = f"Call {call_id} finished and operator {operator.id} available"
+          if status:
+              return f"{message}\n{status}"
+          return message
+        
+      if operator.state == "ringing":
         operator.state = "available"
         operator.call_id = ""
         status = update_call_queue()
-        message = f"Call {call_id} finished and operator {operator.id} available"
+        message = f"Call {call_id} missed"
         if status:
-            return f"{message}\n{status}"
-        return message
-        
-    if operator.call_id == call_id and operator.state == "ringing":
-      operator.state = "available"
-      status = update_call_queue()
-      operator.call_id = ""
-      message = f"Call {call_id} missed"
-      if status:
-        return f"{message}\n{status}"
-      return message 
+          return f"{message}\n{status}"
+        return message 
   return f"Error: Call {call_id} not found or operator not busy"
