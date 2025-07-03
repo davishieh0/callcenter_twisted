@@ -2,9 +2,10 @@ import cmd
 from logic import(
     call_operator,
     answer_call,
+    list_call,
     reject_call,
     hangup_call,
-    update_call_queue) 
+    show) 
 
 class CallCenter(cmd.Cmd):
  
@@ -20,6 +21,7 @@ class CallCenter(cmd.Cmd):
         print(f"Call {call_id} received")
         status = call_operator(call_id)
         print(status)
+        list_call()
 
     def do_answer(self, arg:str):
         if not arg.isalpha():
@@ -49,14 +51,10 @@ class CallCenter(cmd.Cmd):
         call_id = arg
         status_hangup = hangup_call(call_id)
         print(status_hangup)
-        
-        # Só processa a fila se o hangup foi bem-sucedido
-        if "finished and operator" in str(status_hangup):
-            status_call_queue = update_call_queue()
-            if status_call_queue:
-                print(status_call_queue)
-
-
+    def do_show(self, arg):
+        show()
+    def do_list(self,arg):
+        list_call()
 if __name__ == '__main__':
     CallCenter().cmdloop()
 

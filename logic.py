@@ -1,44 +1,34 @@
-from schemas import Operator, Call
+from schemas import Operator
 
 operators = [
     Operator("A"),
     Operator("B")
 ]
 call_queue = []
-calls = []
 
+def list_call():
+  print(call_queue)
+def show():
+  for operator in operators:
+    print(operator.id,operator.state,operator.call_id)
 def update_call_queue():
   if call_queue:
     next_call_id = call_queue.pop(0)
     status = call_operator(next_call_id)
     return status
-
-def find_call_by_id(call_id):
-  for call in calls:
-    if call.id == call_id:
-      return call
     
 def call_operator(call_id):
   if not call_id:
     return f"Error: Call ID is required"
-    
-  call_obj = find_call_by_id(call_id)
-  if not call_obj:
-    # Criar novo objeto Call se não existir
-    call_obj = Call(call_id, [])
-    calls.append(call_obj)
-    
+
   for operator in operators:
-    if operator.state == "available" and operator.id not in call_obj.operators_recused:
+    if operator.state == "available":
         operator.state = "ringing"        
-        operator.call_id = call_obj.id
+        operator.call_id = call_id
         return f"Call {operator.call_id} ringing for operator {operator.id}"
-        
-  if len(call_obj.operators_recused) != 2:
-    call_queue.append(call_obj.id)
-    return f"Call {call_obj.id} waiting in queue"
-  else:
-    return f"Call {call_obj.id} missed"
+      
+  call_queue.append(call_id)
+  return f"Call {call_id} waiting in queue"
 
 def answer_call(operator_id):
   if not operator_id:
@@ -57,23 +47,41 @@ def reject_call(operator_id):
     if operator.id == operator_id:
       if operator.state != "ringing":
           return f"Error: Operator {operator_id} has no call to reject"
-          
-      call_id = operator.call_id
-      operator.state = "available"
-      operator.call_id = ""
 
-      for call_obj in calls:
-        if call_obj.id == call_id:
-          call_obj.operators_recused.append(operator.id) 
-      return f"Call {call_id} rejected by operator {operator_id}"
+      call_id = operator.call_id         
+      operator.state = "available"
+      operator.call_id = ""         
+      call_queue.append(call_id)
+      status = update_call_queue()
+      
+      message = f"Call {call_id} rejected by operator {operator_id}"
+      if status:
+            return f"{message}\n{status}"
+      return message
         
   return f"Error: Operator {operator_id} not found"
 
 def hangup_call(call_id):
+  if call_id in list_call:
+    list_call.remove(call_id)
+    return f"Call {call_id} missed"
+  
   for operator in operators:
     if operator.call_id == call_id and operator.state == "busy":
         operator.state = "available"
         operator.call_id = ""
-        return f"Call {call_id} finished and operator {operator.id} available"
-
+        status = update_call_queue()
+        message = f"Call {call_id} finished and operator {operator.id} available"
+        if status:
+            return f"{message}\n{status}"
+        return message
+        
+    if operator.call_id == call_id and operator.state == "ringing":
+      operator.state = "available"
+      status = update_call_queue()
+      operator.call_id = ""
+      message = f"Call {call_id} missed"
+      if status:
+        return f"{message}\n{status}"
+      return message 
   return f"Error: Call {call_id} not found or operator not busy"
