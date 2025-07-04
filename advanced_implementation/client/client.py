@@ -99,6 +99,6 @@ class CallCenter(cmd.Cmd):
       pass
 
 
-reactor.connectTCP("localhost",5678,CallcenterFactory())
-reactor.run()
+reactor.connectTCP("callcenter-server", 5678, CallcenterFactory())  # Em vez de "localhost"
+reactor.run()reactor.run()
 

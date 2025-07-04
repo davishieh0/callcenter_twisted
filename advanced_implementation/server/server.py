@@ -11,16 +11,20 @@ commands_list = {
 
 class CallcenterProtocol(protocol.Protocol):
     def connectionMade(self):
-        print("Cliente conectado!")
+        print("Client connected!")
         
     def dataReceived(self, data):
-        print(f"Dados recebidos: {data.decode()}")
+        print(f"Data received: {data.decode()}")
         try:
             json_data = json.loads(data.decode())
             command = json_data["command"]
             
             if command in commands_list:
-                status = commands_list[command](json_data["id"])
+                if command == "call":
+                    status = commands_list[command](json_data["id"], self.transport)
+                else:
+                    status = commands_list[command](json_data["id"])
+                
             else:
                 status = "unknown_command"
         except json.JSONDecodeError:
@@ -29,13 +33,14 @@ class CallcenterProtocol(protocol.Protocol):
         self.transport.write(status.encode())
             
     def connectionLost(self, reason):
-        print("Cliente desconectado!")
+        print("Client disconnected!")
     
 class CallcenterFactory(protocol.Factory):
     def buildProtocol(self, addr):
-        print(f"Nova conexão de: {addr}")
+        print(f"New connection from: {addr}")
         return CallcenterProtocol()
 
-print("Servidor CallCenter rodando na porta 5678...")
+
+print("CallCenter server running on port 5678...")
 reactor.listenTCP(5678, CallcenterFactory())
 reactor.run()
