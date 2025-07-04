@@ -3,15 +3,21 @@ from twisted.internet import reactor, protocol
 import cmd
 
 class CallcenterClient(protocol.Protocol):
-  def connectionMade(self):
-    reactor.callInThread(self.start_cmd)
-  
-  def dataReceived(self,data):
-    data = data.decode()
-    print(data)
+    def connectionMade(self):
+        print("Connection made")
+        reactor.callInThread(self.start_cmd)
+
+    def dataReceived(self,data):
+        data = data.decode()
+        print(f"\n{data}")
+        print("(callCenter) ", end="", flush=True)
+
     
-  def start_cmd(self):
-    CallCenter(self).cmdloop()
+    def start_cmd(self):
+            cmd_instance = CallCenter(self)
+            self.cmd_instance = cmd_instance
+            cmd_instance.cmdloop()
+    
     
 class CallcenterFactory(protocol.ClientFactory):
   def buildProtocol(self,addr):
@@ -20,7 +26,7 @@ class CallcenterFactory(protocol.ClientFactory):
 class CallCenter(cmd.Cmd):
 
   intro = 'Welcome'
-  prompt = '(callCenter)'
+  prompt = '(callCenter) '
   file = None
 
   def __init__(self, protocol_instance):
@@ -30,7 +36,7 @@ class CallCenter(cmd.Cmd):
   def do_call(self, arg:str):   
       if not arg.isdigit():
           print("Error: Call ID must be a number. Usage: call <number>")
-          return()
+          return
       call_id = arg
       print(f"Call {call_id} received")
       json_data = json.dumps({"command": "call", "id": call_id})
@@ -39,7 +45,8 @@ class CallCenter(cmd.Cmd):
 
   def do_answer(self, arg:str):
       if not arg.isalpha():
-          return(print("Error: Operator ID must be letters only. Usage: answer <operator_id>"))
+          print("Error: Operator ID must be letters only. Usage: answer <operator_id>")
+          return
       operator_id = arg.upper()
       json_data = json.dumps({"command": "answer", "id": operator_id})
       self.protocol.transport.write(json_data.encode("utf-8"))
@@ -69,22 +76,29 @@ class CallCenter(cmd.Cmd):
       self.protocol.transport.write(json_data.encode("utf-8"))
 
   def do_quit(self, arg):
-      """Sair do cliente CallCenter"""
-      print("Saindo do CallCenter...")
-      self.protocol.transport.loseConnection()
-      reactor.stop()
-      return True
+    """Exit CallCenter client"""
+    print("Exiting CallCenter...")
+    if not self.protocol.transport.disconnecting:
+        self.protocol.transport.loseConnection()
+
+    if reactor.running:
+        reactor.stop()
+    return True  
+
 
   def do_exit(self, arg):
-      """Sair do cliente CallCenter"""
+      """Exit CallCenter client"""
       return self.do_quit(arg)
 
   def do_EOF(self, arg):
-      """Sair do cliente CallCenter com Ctrl+D"""
-      print("\nSaindo do CallCenter...")
+      """Exit CallCenter client with Ctrl+D"""
+      print("\nExiting CallCenter...")
       return self.do_quit(arg)
+
+  def emptyline(self):
+      pass
+
 
 reactor.connectTCP("localhost",5678,CallcenterFactory())
 reactor.run()
 
-   
