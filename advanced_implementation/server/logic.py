@@ -6,11 +6,6 @@ operators = [
 ]
 call_queue = []
 
-def list_call():
-  print(call_queue)
-def show():
-  for operator in operators:
-    print(operator.id,operator.state,operator.call_id)
 def update_call_queue():
   if call_queue:
     next_call_id = call_queue.pop(0)
