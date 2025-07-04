@@ -100,5 +100,5 @@ class CallCenter(cmd.Cmd):
 
 
 reactor.connectTCP("callcenter-server", 5678, CallcenterFactory())  # Em vez de "localhost"
-reactor.run()reactor.run()
+reactor.run()
 
