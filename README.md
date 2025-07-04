@@ -32,11 +32,10 @@ This project implements a call center management system where:
 ```bash
 # Clone the repository
 git clone https://github.com/davishieh0/callcenter_twisted
-cd callcenter_twisted/basic_implementation/advanced_implementation
+cd callcenter_twisted/advanced_implementation  
 
 # Start the application
-docker-compose up --build
-
+docker compose run --rm callcenter-client
 # The client will show an interactive prompt:
 # (callCenter) 
 ```
