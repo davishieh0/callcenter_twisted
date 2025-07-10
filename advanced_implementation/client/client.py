@@ -65,6 +65,7 @@ class CallCenterCmd(cmd.Cmd):
         if not arg.isdigit():
             print("Error: Call ID must be a number. Usage: call <number>")
             return
+        print(f"call {arg} received")
         self._send_command("call", id=arg)
 
     def do_answer(self, arg:str):
@@ -107,10 +108,6 @@ class CallCenterCmd(cmd.Cmd):
     def emptyline(self):
         pass
   
-# REMOVIDO: A classe TerminalLineReceiver não é mais necessária,
-# o stdio pode se comunicar com a classe CallCenterCmd diretamente se ela herdar de LineReceiver,
-# mas a abordagem atual de separar a lógica do terminal e da rede é mais clara.
-# Usaremos o stdio para passar a entrada para o onecmd diretamente.
 
 class StdioProtocol(protocol.Protocol):
     def __init__(self, cmd_instance):
