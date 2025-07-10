@@ -1,5 +1,6 @@
 import json
 from twisted.internet import protocol, reactor
+from twisted.protocols.basic import LineReceiver
 from logic import call_operator, answer_call, reject_call, hangup_call
 
 commands_list = {
@@ -9,35 +10,32 @@ commands_list = {
     "hangup": hangup_call
 }
 
-class CallcenterProtocol(protocol.Protocol):
+class CallcenterProtocol(LineReceiver):
+    delimiter = b'\n'
     def connectionMade(self):
         print("Client connected!")
         
-    def dataReceived(self, data):
-        print(f"Data received: {data.decode()}")
+    def lineReceived(self, line):
+        print(f"Line received: {line.decode()}")
         try:
-            json_data = json.loads(data.decode())
+            json_data = json.loads(line.decode())
             command = json_data["command"]
             
-            if command in commands_list:
-                if command == "call":
-                    status = commands_list[command](json_data["id"], self.transport)
-                else:
-                    status = commands_list[command](json_data["id"])
-                
+            status = commands_list[command](json_data["id"], self)
+            if status:
+                self.sendLine(status.encode())
             else:
-                status = "unknown_command"
-        except json.JSONDecodeError:
-            status = "invalid_json"
-            
-        self.transport.write(status.encode())
-            
+                self.sendLine(b"unknown_command")
+                
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"Invalid command format: {e}")
+            self.sendLine(b"invalid_command_format")
+                      
     def connectionLost(self, reason):
         print("Client disconnected!")
     
 class CallcenterFactory(protocol.Factory):
     def buildProtocol(self, addr):
-        print(f"New connection from: {addr}")
         return CallcenterProtocol()
 
 
