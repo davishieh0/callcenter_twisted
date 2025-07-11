@@ -123,7 +123,7 @@ if __name__ == "__main__":
     
     # Connects to server on port 5678.
     # In Docker, 'callcenter-server' is the hostname. Outside Docker, use 'localhost'.
-    reactor.connectTCP('localhost', 5678, factory)
+    reactor.connectTCP('callcenter-server', 5678, factory)
 
     # Connects terminal input to our command processor.
     stdio.StandardIO(StdioProtocol(cmd_instance))

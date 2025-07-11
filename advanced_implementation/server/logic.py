@@ -1,4 +1,3 @@
-from schemas import Operator
 from twisted.internet import reactor
 from collections import deque
 
@@ -8,28 +7,27 @@ operators = {
 }
 calls = {}
 timeouts = {}
-available_ops = {"A", "B"}
+available_ops = deque(["A", "B"])  # Alterado para deque para garantir a ordem
 call_queue = deque()
 
 def get_id_available_op():
   if not available_ops:
     return None
-  return next(iter(available_ops))
+  return available_ops.popleft()  # Pega o primeiro operador e o remove da fila
 
 def set_operator_available(operator_id):
     if operator_id in operators:
         operators[operator_id]["state"] = "available"   
         operators[operator_id]["call_id"] = ""
         
-        available_ops.add(operator_id)
+        available_ops.append(operator_id)  # Adiciona o operador no final da fila
         print(f"Operator {operator_id} is now available.")
 
 def set_operator_ringing(operator_id, call_id):
-    if operator_id in operators and operator_id in available_ops:
+    if operator_id in operators:
         operators[operator_id]["state"] = "ringing"
         operators[operator_id]["call_id"] = call_id
         
-        available_ops.remove(operator_id)
         print(f"Operator {operator_id} is now ringing for call {call_id}.")
 
 def set_operator_busy(operator_id):

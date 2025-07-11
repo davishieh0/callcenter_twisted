@@ -22,9 +22,8 @@ WORKDIR /app
 # Copy server files
 COPY server.py .
 COPY logic.py .
-COPY schemas.py .
 
 EXPOSE 5678
 
-# Command to run server using virtual environment
-CMD ["/opt/venv/bin/python", "server.py"]
+# Keep container running for manual execution
+CMD ["/bin/bash"]

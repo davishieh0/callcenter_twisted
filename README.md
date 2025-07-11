@@ -21,75 +21,20 @@ This project implements a call center management system where:
 │  - schemas.py   │         │                 │
 └─────────────────┘         └─────────────────┘
 ```
-## Docker Images
-https://hub.docker.com/r/davishieh/callcenter-client
-https://hub.docker.com/r/davishieh/callcenter-server
-## Quick Start
-
-### Prerequisites
-- Docker and Docker Compose installed
 
 ### Running with Docker Compose (Recommended)
 
 ```bash
-# Clone the repository
+# 1. Clone the repository and navigate to the directory
 git clone https://github.com/davishieh0/callcenter_twisted
 cd callcenter_twisted/advanced_implementation  
 
-# Start the application
-docker compose run --rm callcenter-client
-# The client will show an interactive prompt:
-# (callCenter) 
-```
+# 2. Build and start containers in the background
+docker compose up --build -d
 
-## Available Commands
+# 3. Start the server
+docker exec -it callcenter-server /opt/venv/bin/python server.py
 
-Once the client is running, you can use these commands:
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `call <id>` | Make a call | `call 1` |
-| `answer <operator_id>` | Answer a call | `answer A` |
-| `reject <operator_id>` | Reject a call | `reject B` |
-| `hangup <call_id>` | End a call | `hangup 1` |
-| `quit` | Exit client | `quit` |
-
-
-## Features
-
-- **Call Routing**: Automatically assigns calls to available operators
-- **Queue Management**: Queues calls when all operators are busy
-- **Timeout Handling**: Automatically times out unanswered calls (10 seconds)
-- **Multiple Operators**: Supports operators A and B
-- **Real-time Updates**: Server sends status updates to client
-
-## Development
-
-### Running Locally (without Docker)
-
-1. Install dependencies:
-```bash
-pip install twisted
-```
-
-2. Start server:
-```bash
-cd basic_implementation/advanced_implementation/server
-python3 server.py
-```
-
-3. Start client:
-```bash
-cd basic_implementation/advanced_implementation/client
-python3 client.py
-```
-
-### Building Docker Images
-
-```bash
-# Build server
-docker build -t callcenter-server ./server
-
-# Build client  
-docker build -t callcenter-client ./client
+# 4. In a new terminal, start the client
+docker exec -it callcenter-client /opt/venv/bin/python client.py
 ```

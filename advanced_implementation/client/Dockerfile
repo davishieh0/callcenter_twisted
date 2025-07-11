@@ -21,5 +21,5 @@ WORKDIR /app
 # Copy client files
 COPY client.py .
 
-# Command to run client using virtual environment
-CMD ["/opt/venv/bin/python", "client.py"]
+# Keep container running for manual execution
+CMD ["/bin/bash"]

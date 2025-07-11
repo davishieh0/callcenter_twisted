@@ -1,20 +1,25 @@
+version: '3.8'
 
 services:
   callcenter-server:
-    build: ./server
-    ports:
-      - "5678:5678"
+    build: 
+      context: ./server
+    container_name: callcenter-server
     networks:
       - callcenter-network
-    container_name: callcenter-server
-    
+    ports:
+      - "5678:5678"
+    tty: true
+    stdin_open: true
+
   callcenter-client:
-    build: ./client
+    build:
+      context: ./client
+    container_name: callcenter-client
     depends_on:
       - callcenter-server
     networks:
       - callcenter-network
-    container_name: callcenter-client
     tty: true
     stdin_open: true
     environment:
