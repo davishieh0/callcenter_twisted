@@ -1,45 +1,69 @@
 from schemas import Operator
 from twisted.internet import reactor
+from collections import deque
 
-operators = [
-    Operator("A"),
-    Operator("B")
-]
+operators = {
+    "A": {"state": "available", "call_id": ""},
+    "B": {"state": "available", "call_id": ""},
+}
+calls = {}
+timeouts = {}
+available_ops = {"A", "B"}
+call_queue = deque()
 
-call_queue = []
+def get_id_available_op():
+  if not available_ops:
+    return None
+  return next(iter(available_ops))
+
+def set_operator_available(operator_id):
+    if operator_id in operators:
+        operators[operator_id]["state"] = "available"   
+        operators[operator_id]["call_id"] = ""
+        
+        available_ops.add(operator_id)
+        print(f"Operator {operator_id} is now available.")
+
+def set_operator_ringing(operator_id, call_id):
+    if operator_id in operators and operator_id in available_ops:
+        operators[operator_id]["state"] = "ringing"
+        operators[operator_id]["call_id"] = call_id
+        
+        available_ops.remove(operator_id)
+        print(f"Operator {operator_id} is now ringing for call {call_id}.")
+
+def set_operator_busy(operator_id):
+    if operator_id in operators:
+        operators[operator_id]["state"] = "busy"
+        print(f"Operator {operator_id} is now busy.")
+
 
 def timeout(operator_id, call_id, protocol):
-  for operator in operators:
-    if operator_id == operator.id and operator.state=="ringing" and operator.call_id == call_id:
-      operator.state = "available"
-      operator.call_id = ""
+    if operators[operator_id]["state"] == "ringing":
+      set_operator_available(operator_id)      
+      status = update_call_queue(protocol)
       
-      status = update_call_queue()
+    if protocol:
+      message = f"Call {call_id} ignored by operator {operator_id}"
+      protocol.sendLine(message.encode())
       
-      if protocol:
-        message = f"Call {call_id} ignored by operator {operator_id}"
-        protocol.sendLine(message.encode())
-        
-        if status:
-          protocol.sendLine(f"\n{status}".encode())
-      
-def update_call_queue():
+def update_call_queue(protocol=None):
   if call_queue:
-    next_call_id = call_queue.pop(0)
-    status = call_operator(next_call_id)
-    return status
-    
+    next_call_id = call_queue.popleft() # Removes head from queue
+    status = call_operator(next_call_id, protocol)
+    return status 
+  
 def call_operator(call_id,protocol=None):
   if not call_id:
     return f"Error: Call ID is required"
-  for operator in operators:
-    if operator.state == "available":
-        operator.state = "ringing"        
-        operator.call_id = call_id
-        print(operator.id)
-        print(operator.state)
-        timeout_var = reactor.callLater(10, timeout, operator.id, call_id, protocol)
-        return f"Call {operator.call_id} ringing for operator {operator.id}"
+  
+  id_op_available =  get_id_available_op()
+  if id_op_available:
+    set_operator_ringing(id_op_available,call_id)
+    timeouts[id_op_available] = reactor.callLater(10, timeout, id_op_available, call_id, protocol)
+    
+    calls[call_id] = {"op_id": id_op_available} # Adding call with operator ID to calls dictionary 
+    return f"Call {call_id} ringing for operator {id_op_available}"
       
   call_queue.append(call_id)
   return f"Call {call_id} waiting in queue"
@@ -47,57 +71,67 @@ def call_operator(call_id,protocol=None):
 def answer_call(operator_id,protocol=None):
   if not operator_id:
       return f"Error: Operator ID is required"
-      
-  for operator in operators:
-      if operator.id == operator_id:
-          if operator.state != "ringing":
-              return f"Error: Operator {operator_id} has no ringing call to answer"
-         # timeout_var.cancel()
-          operator.state = "busy"
-          return f"Call {operator.call_id} answered by operator {operator.id}"
-  return f"Error: Operator {operator_id} not found"
+  
+  if operators[operator_id]["state"] != "ringing":
+    return f"Error: Operator {operator_id} has no ringing call to answer"
+  
+  if operator_id in timeouts:
+      timeouts[operator_id].cancel()
+      del timeouts[operator_id]
+  set_operator_busy(operator_id)
+  call_id = operators[operator_id]["call_id"]
+  
+  return f"Call {call_id} answered by operator {operator_id}"
 
 def reject_call(operator_id,protocol=None):
-  for operator in operators:
-    if operator.id == operator_id:
-      if operator.state != "ringing":
-          return f"Error: Operator {operator_id} has no call to reject"
+  if not operator_id:
+    return f"Error: Operator {operator_id} not found"
+  if operators[operator_id]["state"] != "ringing":
+    return f"Error: Operator {operator_id} has no call to reject"
 
-      call_id = operator.call_id         
-      operator.state = "available"
-      operator.call_id = ""         
-      call_queue.append(call_id)
-      status = update_call_queue()
-      
-      message = f"Call {call_id} rejected by operator {operator_id}"
-      if status:
-            return f"{message}\n{status}"
-      return message
-        
-  return f"Error: Operator {operator_id} not found"
-
+  if operator_id in timeouts:
+      timeouts[operator_id].cancel()
+      del timeouts[operator_id]
+    
+  call_id = operators[operator_id]["call_id"]
+  
+  if call_id in calls:
+      del calls[call_id]
+    
+  set_operator_available(operator_id)   
+  call_queue.append(call_id)
+  status = update_call_queue(protocol)
+  
+  message = f"Call {call_id} rejected by operator {operator_id}"
+  if status:
+        return f"{message}\n{status}"
+  return message
+    
 def hangup_call(call_id,protocol=None):
   if call_id in call_queue:
     call_queue.remove(call_id)
     return f"Call {call_id} missed"
   
-  for operator in operators:
-    if operator.call_id == call_id:
-      if operator.state == "busy":
-          operator.state = "available"
-          operator.call_id = ""
-          status = update_call_queue()
-          message = f"Call {call_id} finished and operator {operator.id} available"
-          if status:
-              return f"{message}\n{status}"
-          return message
-        
-      if operator.state == "ringing":
-        operator.state = "available"
-        operator.call_id = ""
-        status = update_call_queue()
-        message = f"Call {call_id} missed"
-        if status:
+  if call_id in calls:
+    op_id = calls[call_id]["op_id"]
+    if operators[op_id]["state"] == "busy":
+      set_operator_available(op_id)
+      del calls[call_id]
+      status = update_call_queue(protocol)
+      message = f"Call {call_id} finished and operator {op_id} available"
+      if status:
           return f"{message}\n{status}"
-        return message 
+      return message
+      
+    if operators[op_id]["state"] == "ringing":
+      set_operator_available(op_id)
+      status = update_call_queue(protocol)
+      message = f"Call {call_id} missed"
+      if op_id in timeouts:
+        timeouts[op_id].cancel()
+        del timeouts[op_id]
+        
+      if status:
+            return f"{message}\n{status}"
+      return message 
   return f"Error: Call {call_id} not found or operator not busy"

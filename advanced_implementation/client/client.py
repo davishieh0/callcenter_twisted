@@ -4,25 +4,24 @@ from twisted.protocols.basic import LineReceiver
 import cmd
 from twisted.internet import stdio
 
-# ALTERADO: O protocolo do cliente agora usa LineReceiver para enviar linhas completas.
 class CallcenterClient(LineReceiver):
-    delimiter = b'\n' # Define que as mensagens são separadas por nova linha.
+    delimiter = b'\n' # Defines that messages are separated by newline.
 
     def connectionMade(self):
-        print("Conectado ao servidor. Digite 'help' para ver os comandos.")
-        # A linha mais importante: dá ao "cérebro" (cmd_instance) o contato do "mensageiro" (self).
+        print("Connected to server. Type 'help' to see commands.")
+        # The most important line: gives the "brain" (cmd_instance) contact with the "messenger" (self).
         self.factory.cmd_instance.protocol = self
-        # Exibe o prompt inicial.
+        # Shows the initial prompt.
         print(self.factory.cmd_instance.prompt, end="", flush=True)
 
     def lineReceived(self, line):
-        # Recebe a resposta do servidor e a exibe.
-        print(f"\n<-- Servidor: {line.decode()}")
-        # Redesenha o prompt para o próximo comando.
+        # Receives response from server and displays it.
+        print(f"{line.decode()}")
+        # Redraws the prompt for the next command.
         print(self.factory.cmd_instance.prompt, end="", flush=True)
 
     def connectionLost(self, reason):
-        print("\nConexão perdida com o servidor.")
+        print("\nConnection lost with server.")
         if reactor.running:
             reactor.stop()
 
@@ -31,34 +30,33 @@ class CallCenterFactory(protocol.ClientFactory):
         self.cmd_instance = cmd_instance
     
     def buildProtocol(self, addr):
-        # A fábrica agora passa a si mesma para o protocolo, para que ele possa acessar cmd_instance.
+        # The factory now passes itself to the protocol, so it can access cmd_instance.
         p = CallcenterClient()
         p.factory = self
         return p
 
     def clientConnectionFailed(self, connector, reason):
-        print(f"Falha ao conectar: {reason.getErrorMessage()}")
+        print(f"Connection failed: {reason.getErrorMessage()}")
         if reactor.running:
             reactor.stop()
 
 class CallCenterCmd(cmd.Cmd):
-    intro = 'Bem-vindo ao CallCenter. Conectando...'
+    intro = 'Welcome to CallCenter. Connecting...'
     prompt = '(CallCenter) '
-    protocol = None # O protocolo de rede será inserido aqui quando a conexão for feita.
+    protocol = None # Network protocol will be inserted here when connection is made.
 
     def __init__(self):
         super().__init__()
 
     def _send_command(self, command, **kwargs):
         if not self.protocol:
-            print("Erro: Não conectado ao servidor.")
+            print("Error: Not connected to server.")
             return
         
         data_to_send = {"command": command}
         data_to_send.update(kwargs)
         
         json_data = json.dumps(data_to_send)
-        # ALTERADO: Usa sendLine para enviar uma linha completa com o delimitador.
         self.protocol.sendLine(json_data.encode("utf-8"))
 
     def do_call(self, arg:str):   
@@ -88,7 +86,7 @@ class CallCenterCmd(cmd.Cmd):
 
     def do_quit(self, arg):
         """Exit CallCenter client"""
-        print("Saindo...")
+        print("Exiting...")
         if self.protocol:
             self.protocol.transport.loseConnection()
         else:
@@ -123,11 +121,11 @@ if __name__ == "__main__":
     cmd_instance = CallCenterCmd()
     factory = CallCenterFactory(cmd_instance)
     
-    # Conecta ao servidor na porta 5678.
-    # No Docker, 'callcenter-server' é o nome do host. Fora do Docker, use 'localhost'.
+    # Connects to server on port 5678.
+    # In Docker, 'callcenter-server' is the hostname. Outside Docker, use 'localhost'.
     reactor.connectTCP('localhost', 5678, factory)
 
-    # Conecta a entrada do terminal ao nosso processador de comandos.
+    # Connects terminal input to our command processor.
     stdio.StandardIO(StdioProtocol(cmd_instance))
 
     reactor.run()
